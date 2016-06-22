@@ -405,6 +405,7 @@ function New-SilverlightApplication {
 
     try
     {
+	    throw "SKIPPING ALL SILVERLIGHT"
         New-Project SilverlightProject $ProjectName $SolutionFolder
     }
     catch {
