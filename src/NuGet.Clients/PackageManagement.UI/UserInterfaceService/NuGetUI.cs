@@ -190,6 +190,7 @@ namespace NuGet.PackageManagement.UI
 
         internal DetailControl DetailControl
         {
+            get { return _detailControl; }
             set
             {
                 _detailControl = value;

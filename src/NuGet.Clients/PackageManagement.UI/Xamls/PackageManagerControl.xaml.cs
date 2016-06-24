@@ -876,9 +876,9 @@ namespace NuGet.PackageManagement.UI
         /// thru UIActionEngine.</param>
         /// <param name="setOptions">A method that is called to set the action options,
         /// such as dependency behavior.</param>
-        public void ExecuteAction(Func<Task> performAction, Action<NuGetUI> setOptions)
+        public async void ExecuteAction(Func<Task> performAction, Action<NuGetUI> setOptions)
         {
-            NuGetUIThreadHelper.JoinableTaskFactory.RunAsync(async delegate
+            await NuGetUIThreadHelper.JoinableTaskFactory.RunAsync(async delegate
             {
                 this.IsEnabled = false;
                 NuGetEventTrigger.Instance.TriggerEvent(NuGetEvent.PackageOperationBegin);
@@ -905,6 +905,9 @@ namespace NuGet.PackageManagement.UI
                     IsEnabled = true;
                 }
             });
+
+            var nuget = Model.UIController as NuGetUI;
+            nuget.DetailControl?.Refresh();
         }
 
         private void ExecuteUninstallPackageCommand(object sender, ExecutedRoutedEventArgs e)
