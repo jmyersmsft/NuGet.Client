@@ -2,7 +2,10 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Net;
 
 namespace NuGet.Configuration
 {
@@ -25,6 +28,12 @@ namespace NuGet.Configuration
         /// Indicates if password is stored in clear text.
         /// </summary>
         public bool IsPasswordClearText { get; }
+
+        /// <summary>
+        /// A list of HTTP auth types the credentials in this source should be used for. Useful values include negotiate, ntlm, basic.
+        /// May be null, in which case all auth types are used.
+        /// </summary>
+        public IReadOnlyList<string> AuthTypeFilter { get; }
 
         /// <summary>
         /// Retrieves password in clear text. Decrypts on-demand.
@@ -63,14 +72,20 @@ namespace NuGet.Configuration
         /// <returns>True if credentials object is valid</returns>
         public bool IsValid() => !string.IsNullOrEmpty(Username) && !string.IsNullOrEmpty(PasswordText);
 
+        public ICredentials GetCredentials()
+        {
+            return new AuthTypeFilteredCredentials(new NetworkCredential(Username, Password), AuthTypeFilter);
+        }
+
         /// <summary>
         /// Instantiates the credential instance out of raw values read from a config file.
         /// </summary>
         /// <param name="source">Associated source ID (needed for reporting errors)</param>
+        /// <param name="authTypeFilter">HTTP auth types these credentials should be used for. If null, all auth types are used.</param>
         /// <param name="username">User name</param>
         /// <param name="passwordText">Password as stored in config file</param>
         /// <param name="isPasswordClearText">Hints if password provided in clear text</param>
-        public PackageSourceCredential(string source, string username, string passwordText, bool isPasswordClearText)
+        public PackageSourceCredential(string source, IEnumerable<string> authTypeFilter, string username, string passwordText, bool isPasswordClearText)
         {
             if (source == null)
             {
@@ -86,6 +101,19 @@ namespace NuGet.Configuration
             Username = username;
             PasswordText = passwordText;
             IsPasswordClearText = isPasswordClearText;
+            AuthTypeFilter = authTypeFilter?.ToArray();
+        }
+
+        /// <summary>
+        /// Instantiates the credential instance out of raw values read from a config file.
+        /// </summary>
+        /// <param name="source">Associated source ID (needed for reporting errors)</param>
+        /// <param name="username">User name</param>
+        /// <param name="passwordText">Password as stored in config file</param>
+        /// <param name="isPasswordClearText">Hints if password provided in clear text</param>
+        public PackageSourceCredential(string source, string username, string passwordText, bool isPasswordClearText)
+            : this(source, null, username, passwordText, isPasswordClearText)
+        {
         }
 
         /// <summary>
@@ -116,7 +144,7 @@ namespace NuGet.Configuration
             try
             {
                 var passwordText = storePasswordInClearText ? password: EncryptionUtility.EncryptString(password);
-                return new PackageSourceCredential(source, username, passwordText, isPasswordClearText: storePasswordInClearText);
+                return new PackageSourceCredential(source, null, username, passwordText, storePasswordInClearText);
             }
             catch (NotSupportedException e)
             {

@@ -240,16 +240,19 @@ namespace NuGet.Configuration
 
                 if (!String.IsNullOrEmpty(userName))
                 {
+                    var authTypeString = values.FirstOrDefault(k => k.Key.Equals(ConfigurationConstants.AuthTypeFilter, StringComparison.OrdinalIgnoreCase)).Value;
+                    var authTypes = AuthTypeFilteredCredentials.ParseAuthTypes(authTypeString);
+                        
                     var encryptedPassword = values.FirstOrDefault(k => k.Key.Equals(ConfigurationConstants.PasswordToken, StringComparison.OrdinalIgnoreCase)).Value;
                     if (!String.IsNullOrEmpty(encryptedPassword))
                     {
-                        return new PackageSourceCredential(sourceName, userName, encryptedPassword, isPasswordClearText: false);
+                        return new PackageSourceCredential(sourceName, authTypes, userName, encryptedPassword, isPasswordClearText: false);
                     }
 
                     var clearTextPassword = values.FirstOrDefault(k => k.Key.Equals(ConfigurationConstants.ClearTextPasswordToken, StringComparison.Ordinal)).Value;
                     if (!String.IsNullOrEmpty(clearTextPassword))
                     {
-                        return new PackageSourceCredential(sourceName, userName, clearTextPassword, isPasswordClearText: true);
+                        return new PackageSourceCredential(sourceName, authTypes, userName, clearTextPassword, isPasswordClearText: true);
                     }
                 }
             }
@@ -265,17 +268,19 @@ namespace NuGet.Configuration
                 return null;
             }
 
-            var match = Regex.Match(rawCredentials.Trim(), @"^Username=(?<user>.*?);\s*Password=(?<pass>.*?)$", RegexOptions.IgnoreCase);
+            var match = Regex.Match(rawCredentials.Trim(), @"^Username=(?<user>.*?);(?:\s*AuthTypes=(?<authTypes>.*?);)?\s*Password=(?<pass>.*?)$", RegexOptions.IgnoreCase);
             if (!match.Success)
             {
                 return null;
             }
 
+            var authTypes = match.Groups["authTypes"].Success
+                ? AuthTypeFilteredCredentials.ParseAuthTypes(match.Groups["authTypes"].Value)
+                : null;
+
             return new PackageSourceCredential(
                 sourceName,
-                match.Groups["user"].Value,
-                match.Groups["pass"].Value,
-                isPasswordClearText: true);
+                authTypeFilter: authTypes, username: match.Groups["user"].Value, passwordText: match.Groups["pass"].Value, isPasswordClearText: true);
         }
 
         private void MigrateSources(List<PackageSource> loadedPackageSources)
