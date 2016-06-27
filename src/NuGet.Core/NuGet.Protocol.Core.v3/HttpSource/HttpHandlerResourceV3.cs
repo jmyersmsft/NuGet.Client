@@ -37,7 +37,7 @@ namespace NuGet.Protocol
 
         public override HttpMessageHandler MessageHandler => _messageHandler;
 
-        public static ICredentialService CredentialService { get; set; }
+        public static ICredentialService CredentialService { get; set; } = new DefaultCredentialsCredentialService();
 
         /// <summary>
         /// Gets or sets a delegate that is to be invoked when authenticated feed credentials are successfully
