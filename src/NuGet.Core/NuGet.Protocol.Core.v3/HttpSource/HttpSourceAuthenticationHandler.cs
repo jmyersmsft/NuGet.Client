@@ -57,8 +57,7 @@ namespace NuGet.Protocol
             if (packageSource.Credentials != null &&
                 packageSource.Credentials.IsValid())
             {
-                var credentials = new NetworkCredential(packageSource.Credentials.Username, packageSource.Credentials.Password);
-                _credentials.Credentials = credentials;
+                _credentials.Credentials = packageSource.Credentials.GetCredentials();
             }
 
             _clientHandler.Credentials = _credentials;

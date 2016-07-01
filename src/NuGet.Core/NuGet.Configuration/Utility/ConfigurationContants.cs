@@ -7,6 +7,8 @@ namespace NuGet.Configuration
     {
         public static readonly string ApiKeys = "apikeys";
 
+        public static readonly string AuthTypeFilter = "authTypeFilter";
+
         public static readonly string DisabledPackageSources = "disabledPackageSources";
 
         public static readonly string PackageSources = "packageSources";

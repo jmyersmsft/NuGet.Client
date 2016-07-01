@@ -28,21 +28,22 @@ namespace NuGet.CommandLine
 
         public ICredentials GetCredentials(Uri uri, IWebProxy proxy, CredentialType credentialType, bool retrying)
         {
-            NetworkCredential credentials;
+            ICredentials credentials;
+            string userName;
             // If we are retrying, the stored credentials must be invalid.
-            if (!retrying && (credentialType == CredentialType.RequestCredentials) && TryGetCredentials(uri, out credentials))
+            if (!retrying && (credentialType == CredentialType.RequestCredentials) && TryGetCredentials(uri, out credentials, out userName))
             {
                 _logger.LogMinimal(
                     string.Format(
                         CultureInfo.CurrentCulture,
                         LocalizedResourceManager.GetString(nameof(NuGetResources.SettingsCredentials_UsingSavedCredentials)),
-                        credentials.UserName));
+                        userName));
                 return credentials;
             }
             return null;
         }
 
-        private bool TryGetCredentials(Uri uri, out NetworkCredential configurationCredentials)
+        private bool TryGetCredentials(Uri uri, out ICredentials configurationCredentials, out string userName)
         {
             var source = _packageSourceProvider.LoadPackageSources().FirstOrDefault(p =>
             {
@@ -56,9 +57,11 @@ namespace NuGet.CommandLine
             {
                 // The source is not in the config file
                 configurationCredentials = null;
+                userName = null;
                 return false;
             }
-            configurationCredentials = new NetworkCredential(source.Credentials.Username, source.Credentials.Password);
+            configurationCredentials = source.Credentials.GetCredentials();
+            userName = source.Credentials.Username;
             return true;
         }
 
