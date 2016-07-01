@@ -47,20 +47,7 @@ namespace NuGet.Protocol
             // Credentials may change during this call so keep a local copy.
             var currentCredentials = Credentials;
 
-            NetworkCredential result = null;
-
-            if (currentCredentials == null)
-            {
-                // This is used to match the value of HttpClientHandler.UseDefaultCredentials = true
-                result = CredentialCache.DefaultNetworkCredentials;
-            }
-            else
-            {
-                // Get credentials from the current credential store.
-                result = currentCredentials.GetCredential(uri, authType);
-            }
-
-            return result;
+            return currentCredentials?.GetCredential(uri, authType);
         }
     }
 }
