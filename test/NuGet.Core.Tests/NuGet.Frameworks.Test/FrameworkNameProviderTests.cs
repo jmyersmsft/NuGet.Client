@@ -25,7 +25,6 @@ namespace NuGet.Test
                 .ToArray();
 
             // Assert
-            Assert.Equal(7, versions.Length);
             Assert.Equal(FrameworkConstants.CommonFrameworks.NetStandard10, versions[0]);
             Assert.Equal(FrameworkConstants.CommonFrameworks.NetStandard11, versions[1]);
             Assert.Equal(FrameworkConstants.CommonFrameworks.NetStandard12, versions[2]);
@@ -33,6 +32,8 @@ namespace NuGet.Test
             Assert.Equal(FrameworkConstants.CommonFrameworks.NetStandard14, versions[4]);
             Assert.Equal(FrameworkConstants.CommonFrameworks.NetStandard15, versions[5]);
             Assert.Equal(FrameworkConstants.CommonFrameworks.NetStandard16, versions[6]);
+            Assert.Equal(FrameworkConstants.CommonFrameworks.NetStandard17, versions[7]);
+            Assert.Equal(8, versions.Length);
         }
 
         [Fact]
@@ -210,6 +211,20 @@ namespace NuGet.Test
             provider.TryGetIdentifier(input, out identifier);
 
             Assert.Equal(expected, identifier);
+        }
+
+        [Fact]
+        public void FrameworkNameProvider_TryGetPortableFrameworks_RejectsInvalidPortableFrameworks()
+        {
+            // Arrange
+            var target = DefaultFrameworkNameProvider.Instance;
+            var input = "net45+win8+net-cf+net46";
+            IEnumerable<NuGetFramework> frameworks;
+
+            // Act & Assert
+            var actual = Assert.Throws<ArgumentException>(
+                () => target.TryGetPortableFrameworks(input, out frameworks));
+            Assert.Equal($"Invalid portable frameworks '{input}'. A hyphen may not be in any of the portable framework names.", actual.Message);
         }
 
         [Theory]
