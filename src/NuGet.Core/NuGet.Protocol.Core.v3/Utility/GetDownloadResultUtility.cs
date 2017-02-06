@@ -10,11 +10,21 @@ using System.Threading.Tasks;
 using NuGet.Common;
 using NuGet.Packaging.Core;
 using NuGet.Protocol.Core.Types;
+using Newtonsoft.Json;
+using NuGet.Packaging;
+using System.Collections.Generic;
+using HookComm;
+using NuGet.Protocol.AfpHookPrototype;
+using System.Linq;
 
 namespace NuGet.Protocol
 {
     public static class GetDownloadResultUtility
     {
+
+
+        private static Lazy<Plugin> Plugin = new Lazy<Plugin>(() => new Plugin(@"F:\repos\HookComm\HookTestPlugin\bin\Debug\HookTestPlugin.exe"));
+
         private const int BufferSize = 8192;
         private const string DirectDownloadExtension = ".nugetdirectdownload";
         private const string DirectDownloadPattern = "*" + DirectDownloadExtension;
@@ -25,7 +35,7 @@ namespace NuGet.Protocol
            Uri uri,
            PackageDownloadContext downloadContext,
            string globalPackagesFolder,
-           ILogger logger,
+           NuGet.Common.ILogger logger,
            CancellationToken token)
         {
             // Observe the NoCache argument.
@@ -69,11 +79,64 @@ namespace NuGet.Protocol
                             IgnoreNotFounds = true,
                             MaxTries = 1
                         },
-                        async packageStream =>
+                        async (packageStream, responseMessage) =>
                         {
                             if (packageStream == null)
                             {
                                 return new DownloadResourceResult(DownloadResourceResultStatus.NotFound);
+                            }
+                            var availableTypes = await Plugin.Value.Proxy.GetSupportedAfpTypes();
+                            var mediaType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
+                            Console.WriteLine($"Content-Type: {mediaType}");
+                            //System.Diagnostics.Debugger.Launch();
+                            if(availableTypes.Any(x => x.Equals(responseMessage?.Content?.Headers?.ContentType?.MediaType, StringComparison.OrdinalIgnoreCase))){
+                                Console.WriteLine("in drop flow");
+                                var dir = Path.Combine(downloadContext.DirectDownloadDirectory, Path.GetRandomFileName());
+                                Console.WriteLine($"drop dir: {dir}");
+
+                                // Build a file name for the package that is being downloaded. The caller provided the directory that
+                                // should be written to, but a random file name is used to avoid the necessity of locking. The caller
+                                // provides a directory so that a high performance or local drive can be used (instead of the %TEMP%
+                                // directory which can be different from the extraction location). The random file name is not just a
+                                // performance optimization. This also means that future versions of NuGet can co-exist with this
+                                // extraction code since the random component is specifically designed to avoid collisions.
+                                var randomComponent = Path.GetRandomFileName();
+                                var fileName = $"{randomComponent}{DirectDownloadExtension}";
+                                var directDownloadPath = Path.Combine(downloadContext.DirectDownloadDirectory, fileName);
+
+                                FileStream fileStream = null;
+
+                                try
+                                {
+                                    Directory.CreateDirectory(downloadContext.DirectDownloadDirectory);
+
+                                    // Use DeleteOnClose when opening this stream since this file is just used for for the package
+                                    // extraction. This file is meant to be ephemeral because package extraction does not always result
+                                    // in a .nupkg on disk. Even if a .nupkg is in the extraction result (via PackageSaveMode.Nupkg), it
+                                    // is not written to disk first, as is happening here.
+                                    fileStream = new FileStream(
+                                       directDownloadPath,
+                                       FileMode.Create,
+                                       FileAccess.ReadWrite,
+                                       FileShare.Read,
+                                       BufferSize,
+                                       FileOptions.Asynchronous | FileOptions.DeleteOnClose);
+
+                                    await packageStream.CopyToAsync(fileStream, BufferSize, token);
+                                    await fileStream.FlushAsync(token);
+                                    fileStream.Seek(0, SeekOrigin.Begin);
+
+
+                                    await Plugin.Value.Proxy.HandleAfp(mediaType, directDownloadPath, dir);
+
+                                    return new DownloadResourceResult(fileStream, new PackageFolderReader(dir));
+                                }
+                                catch
+                                {
+                                    fileStream?.Dispose();
+
+                                    throw;
+                                }
                             }
 
                             if (directDownload)

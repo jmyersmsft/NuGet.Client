@@ -94,6 +94,12 @@ namespace NuGet.Protocol
                                 requestUri,
                                 networkStream,
                                 request.DownloadTimeout);
+
+                            foreach(var header in response.Content.Headers)
+                            {
+                                newContent.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                            }
+                            
                             response.Content = newContent;
                         }
 

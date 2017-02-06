@@ -96,7 +96,7 @@ Test-BuildEnvironment -CI:$CI
 # Adjust version skipping if only one version installed - if VS15 is not installed, no need to specify SkipVS15
 if (-not $SkipVS14 -and -not $VS14Installed) {
     Warning-Log "VS14 build is requested but it appears not to be installed."
-    $SkipVS14 = $True
+    #$SkipVS14 = $True
 }
 
 if (-not $SkipVS15 -and -not $VS15Installed) {

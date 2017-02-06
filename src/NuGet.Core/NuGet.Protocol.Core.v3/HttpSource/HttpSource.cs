@@ -184,6 +184,32 @@ namespace NuGet.Protocol
                 token: token);
         }
 
+
+        public async Task<T> ProcessStreamAsync<T>(
+            HttpSourceRequest request,
+            Func<Stream, HttpResponseMessage, Task<T>> processAsync,
+            ILogger log,
+            CancellationToken token)
+        {
+            return await ProcessResponseAsync(
+                request,
+                async response =>
+                {
+                    if ((request.IgnoreNotFounds && response.StatusCode == HttpStatusCode.NotFound) ||
+                         response.StatusCode == HttpStatusCode.NoContent)
+                    {
+                        return await processAsync(null, response);
+                    }
+
+                    response.EnsureSuccessStatusCode();
+
+                    var networkStream = await response.Content.ReadAsStreamAsync();
+                    return await processAsync(networkStream, response);
+                },
+                log,
+                token);
+        }
+
         public async Task<T> ProcessStreamAsync<T>(
             HttpSourceRequest request,
             Func<Stream, Task<T>> processAsync,
