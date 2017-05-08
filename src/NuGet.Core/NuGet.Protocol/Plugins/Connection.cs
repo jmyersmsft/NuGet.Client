@@ -257,7 +257,9 @@ namespace NuGet.Protocol.Plugins
 
         private void OnMessageReceived(object sender, MessageEventArgs e)
         {
+            MessageTracker.Instance.MarkMessageTimestamp(e.Message, "BeginConnectionOnMessageReceived");
             MessageReceived?.Invoke(this, e);
+            MessageTracker.Instance.MarkMessageTimestamp(e.Message, "EndConnectionOnMessageReceived");
         }
 
         private void OnFaulted(object sender, ProtocolErrorEventArgs e)

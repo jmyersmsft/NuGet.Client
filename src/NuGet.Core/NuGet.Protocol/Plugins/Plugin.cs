@@ -220,10 +220,13 @@ namespace NuGet.Protocol.Plugins
 
         private void OnMessageReceived(object sender, MessageEventArgs e)
         {
+            MessageTracker.Instance.MarkMessageTimestamp(e.Message, "BeginPluginOnMessagereceived");
             lock (_idleTimerLock)
             {
+                MessageTracker.Instance.MarkMessageTimestamp(e.Message, "LockedPluginOnMessagereceived");
                 _idleTimer?.Change(_idleTimeout, Timeout.InfiniteTimeSpan);
             }
+            MessageTracker.Instance.MarkMessageTimestamp(e.Message, "EndPluginOnMessagereceived");
         }
     }
 }

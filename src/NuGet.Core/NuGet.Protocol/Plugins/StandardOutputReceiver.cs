@@ -94,23 +94,32 @@ namespace NuGet.Protocol.Plugins
         private void OnLineRead(object sender, LineReadEventArgs e)
         {
             Message message = null;
-
             // Top-level exception handler for a worker pool thread.
             try
             {
                 if (!IsClosed && !string.IsNullOrEmpty(e.Line))
                 {
+                    MessageTracker.Instance.AddMessageLine(e.Line);
+                    MessageTracker.Instance.MarkLineTimestamp(e.Line, "beginParse");
                     message = JsonSerializationUtilities.Deserialize<Message>(e.Line);
-
+                    MessageTracker.Instance.MapLineToMessage(e.Line, message);
+                    MessageTracker.Instance.MarkMessageTimestamp(message, "endParse");
                     if (message != null)
                     {
+                        MessageTracker.Instance.MarkMessageTimestamp(message, "beforeFireMessageReceivedEvent");
                         FireMessageReceivedEvent(message);
+                        MessageTracker.Instance.MarkMessageTimestamp(message, "afterFireMessageReceivedEvent");
                     }
                 }
             }
             catch (Exception ex)
             {
                 FireFaultEvent(ex, message);
+            }
+            finally
+            {
+                if(e.Line != null)
+                MessageTracker.Instance.CompleteLine(e.Line);
             }
         }
     }

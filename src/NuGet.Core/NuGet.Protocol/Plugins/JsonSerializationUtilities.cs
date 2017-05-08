@@ -87,6 +87,18 @@ namespace NuGet.Protocol.Plugins
 
             Serializer.Serialize(writer, value);
         }
+        /// <summary>
+        /// Serializes an object to the provided writer.
+        /// </summary>
+        /// <param name="writer">A JSON writer.</param>
+        /// <param name="value">The value to serialize.</param>
+        /// <exception cref="ArgumentNullException">Thrown if <paramref name="value" /> is <c>null</c>.</exception>
+        public static string Serialize(object value)
+        {
+            var writer = new StringWriter();
+            Serializer.Serialize(writer, value);
+            return writer.ToString();
+        }
 
         /// <summary>
         /// Deserializes an object.

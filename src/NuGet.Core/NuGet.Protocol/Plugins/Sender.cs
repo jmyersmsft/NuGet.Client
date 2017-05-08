@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,6 +54,8 @@ namespace NuGet.Protocol.Plugins
 
             Close();
 
+            loggerThread.Dispose();
+            MessageTracker.Instance.Dispose();
             _textWriter.Dispose();
 
             GC.SuppressFinalize(this);
@@ -91,6 +95,8 @@ namespace NuGet.Protocol.Plugins
             _hasConnected = true;
         }
 
+        AsyncLoggerThread loggerThread = new AsyncLoggerThread("Sender");
+
         /// <summary>
         /// Asynchronously sends a message to the target.
         /// </summary>
@@ -104,6 +110,8 @@ namespace NuGet.Protocol.Plugins
         /// is cancelled.</exception>
         public Task SendAsync(Message message, CancellationToken cancellationToken)
         {
+            var stopWatch = System.Diagnostics.Stopwatch.StartNew();
+
             ThrowIfDisposed();
 
             if (message == null)
@@ -146,5 +154,52 @@ namespace NuGet.Protocol.Plugins
                 throw new ObjectDisposedException(nameof(Sender));
             }
         }
+    }
+
+    public class AsyncLoggerThread : IDisposable
+    {
+        private BlockingCollection<object> queue = new BlockingCollection<object>(new ConcurrentQueue<object>());
+        private ManualResetEventSlim done = new ManualResetEventSlim();
+        private Stopwatch timer = Stopwatch.StartNew();
+
+        public void Enqueue(object obj)
+        {
+            queue.Add(new {Timestamp = timer.Elapsed, Data = obj});
+        }
+
+        public AsyncLoggerThread(string name)
+        {
+            Task.Factory.StartNew(
+                () =>
+                {
+                    using (var file = new StreamWriter(File.OpenWrite($@"c:\temp\timings.{name}.{Process.GetCurrentProcess().ProcessName}.{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.{Process.GetCurrentProcess().Id}.{Guid.NewGuid():N}.log")))
+                    {
+                        try
+                        {
+                            file.WriteLine("{\"entries\":[null");
+                            foreach (var obj in queue.GetConsumingEnumerable())
+                            {
+                                file.WriteLine("," + JsonConvert.SerializeObject(obj));
+                                file.Flush();
+                            }
+
+                        }
+                        finally
+                        {
+                            file.WriteLine("]}");
+                            done.Set();
+                        }
+                    }
+                },
+                TaskCreationOptions.LongRunning
+                );
+        }
+
+        public void Dispose()
+        {
+            queue.CompleteAdding();
+            //done.Wait();
+        }
+
     }
 }

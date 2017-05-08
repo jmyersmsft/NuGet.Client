@@ -468,6 +468,7 @@ namespace NuGet.Protocol.Plugins
 
         private void OnMessageReceived(object sender, MessageEventArgs e)
         {
+            MessageTracker.Instance.MarkMessageTimestamp(e.Message, "BeginMessageDispatcherOnMessagereceived");
             // Capture _connection as SetConnection(...) could null it out later.
             var connection = _connection;
 
