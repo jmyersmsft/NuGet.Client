@@ -1,9 +1,10 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGet.Common;
 
 namespace NuGet.Protocol.Plugins
 {
@@ -13,7 +14,7 @@ namespace NuGet.Protocol.Plugins
     public sealed class AutomaticProgressReporter : IDisposable
     {
         private readonly CancellationToken _cancellationToken;
-        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly ICancellationTokenSource _cancellationTokenSource;
         private readonly IConnection _connection;
         private bool _isDisposed;
         private readonly Message _request;
@@ -28,7 +29,7 @@ namespace NuGet.Protocol.Plugins
         {
             _connection = connection;
             _request = request;
-            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _cancellationTokenSource = PluginCancellationTokenSource.CreateLinkedTokenSource(cancellationToken, $"AutomaticProgressReporter {request.RequestId}");
             _cancellationToken = _cancellationTokenSource.Token;
             _semaphore = new SemaphoreSlim(initialCount: 1, maxCount: 1);
             _timer = new Timer(OnTimer, state: null, dueTime: interval, period: interval);
@@ -56,7 +57,7 @@ namespace NuGet.Protocol.Plugins
                 {
                     using (_cancellationTokenSource)
                     {
-                        _cancellationTokenSource.Cancel();
+                        _cancellationTokenSource.Cancel($"Disposing {nameof(AutomaticProgressReporter)}");
                     }
                 }
                 catch (Exception)

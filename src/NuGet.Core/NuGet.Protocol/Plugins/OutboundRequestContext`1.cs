@@ -1,10 +1,11 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGet.Common;
 
 namespace NuGet.Protocol.Plugins
 {
@@ -15,13 +16,13 @@ namespace NuGet.Protocol.Plugins
     public sealed class OutboundRequestContext<TResult> : OutboundRequestContext
     {
         private readonly CancellationToken _cancellationToken;
-        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly ICancellationTokenSource _cancellationTokenSource;
         private readonly IConnection _connection;
         private bool _isClosed;
         private bool _isDisposed;
         private bool _isKeepAlive;
         private readonly Message _request;
-        private readonly TaskCompletionSource<TResult> _taskCompletionSource;
+        private readonly ITaskCompletionSource<TResult> _taskCompletionSource;
         private readonly TimeSpan? _timeout;
         private readonly Timer _timer;
 
@@ -64,7 +65,7 @@ namespace NuGet.Protocol.Plugins
 
             _connection = connection;
             _request = request;
-            _taskCompletionSource = new TaskCompletionSource<TResult>();
+            _taskCompletionSource = NuGetTaskCompletionSource.Create<TResult>($"{nameof(OutboundRequestContext)} {request.RequestId}");
             _timeout = timeout;
             _isKeepAlive = isKeepAlive;
             RequestId = request.RequestId;
@@ -78,9 +79,9 @@ namespace NuGet.Protocol.Plugins
                     period: Timeout.InfiniteTimeSpan);
             }
 
-            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _cancellationTokenSource = PluginCancellationTokenSource.CreateLinkedTokenSource(cancellationToken, $"{nameof(OutboundRequestContext)} {request.RequestId}");
 
-            _cancellationTokenSource.Token.Register(Close);
+            _cancellationTokenSource.Token.Register(() => Close("Cancelled"));
 
             // Capture the cancellation token now because if the cancellation token source
             // is disposed race conditions may cause an exception acccessing its Token property.
@@ -92,7 +93,7 @@ namespace NuGet.Protocol.Plugins
         /// </summary>
         public override void HandleCancel()
         {
-            _taskCompletionSource.TrySetCanceled();
+            _taskCompletionSource.TrySetCanceled("Received cancellation message");
         }
 
         /// <summary>
@@ -158,7 +159,7 @@ namespace NuGet.Protocol.Plugins
 
             if (disposing)
             {
-                Close();
+                Close("Disposing");
 
                 // Do not dispose of _connection.
             }
@@ -166,11 +167,11 @@ namespace NuGet.Protocol.Plugins
             _isDisposed = true;
         }
 
-        private void Close()
+        private void Close(string reason)
         {
             if (!_isClosed)
             {
-                _taskCompletionSource.TrySetCanceled();
+                _taskCompletionSource.TrySetCanceled($"Closing {nameof(OutboundRequestContext)}: {reason}");
 
                 if (_timer != null)
                 {
@@ -181,7 +182,7 @@ namespace NuGet.Protocol.Plugins
                 {
                     using (_cancellationTokenSource)
                     {
-                        _cancellationTokenSource.Cancel();
+                        _cancellationTokenSource.Cancel($"Closing {nameof(OutboundRequestContext)}: {reason}");
                     }
                 }
                 catch (Exception)
@@ -196,7 +197,7 @@ namespace NuGet.Protocol.Plugins
         {
             Debug.WriteLine($"Request {_request.RequestId} timed out.");
 
-            _taskCompletionSource.TrySetCanceled();
+            _taskCompletionSource.TrySetCanceled("Timed out");
         }
     }
 }

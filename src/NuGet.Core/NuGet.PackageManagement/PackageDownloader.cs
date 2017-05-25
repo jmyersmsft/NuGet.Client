@@ -1,4 +1,4 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -75,7 +75,7 @@ namespace NuGet.PackageManagement
             var failedTasks = new List<Task<DownloadResourceResult>>();
             var tasksLookup = new Dictionary<Task<DownloadResourceResult>, SourceRepository>();
 
-            var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
+            var linkedTokenSource = PluginCancellationTokenSource.CreateLinkedTokenSource(token, $"{nameof(PackageDownloader)} {packageIdentity}");
             try
             {
                 // Create a group of local sources that will go first, then everything else.
@@ -128,7 +128,7 @@ namespace NuGet.PackageManagement
                             tasks.Remove(completedTask);
 
                             // Cancel the other tasks, since, they may still be running
-                            linkedTokenSource.Cancel();
+                            linkedTokenSource.Cancel("Canceling losers of race to provide package");
 
                             if (tasks.Any())
                             {
