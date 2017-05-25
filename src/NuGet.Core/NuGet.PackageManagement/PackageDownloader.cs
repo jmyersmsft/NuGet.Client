@@ -185,6 +185,8 @@ namespace NuGet.PackageManagement
                     errors.AppendLine($"  {tasksLookup[task].PackageSource.Source}: {message}");
                 }
 
+                errors.AppendLine($"{failedTasks.Count}/{tasksLookup.Count} failed.");
+
                 throw new FatalProtocolException(errors.ToString());
             }
             catch
