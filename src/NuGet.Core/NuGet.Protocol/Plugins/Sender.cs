@@ -1,4 +1,4 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -113,7 +113,12 @@ namespace NuGet.Protocol.Plugins
             var stopWatch = System.Diagnostics.Stopwatch.StartNew();
 
             ThrowIfDisposed();
-
+            TimeSpan
+                beforeLock,
+                afterLock,
+                afterWrite,
+                afterUnlock;
+            
             if (message == null)
             {
                 throw new ArgumentNullException(nameof(message));
@@ -126,22 +131,38 @@ namespace NuGet.Protocol.Plugins
                 throw new InvalidOperationException(Strings.Plugin_NotConnected);
             }
 
+            string serialized = null;
             if (!_isClosed)
             {
+                beforeLock = stopWatch.Elapsed;
                 lock (_sendLock)
                 {
-                    using (var jsonWriter = new JsonTextWriter(_textWriter))
-                    {
-                        jsonWriter.CloseOutput = false;
+                    afterLock = stopWatch.Elapsed;
+                    //using (var jsonWriter = new JsonTextWriter(_textWriter))
+                    //{
+                    //    jsonWriter.CloseOutput = false;
 
-                        JsonSerializationUtilities.Serialize(jsonWriter, message);
-
-                        // We need to terminate JSON objects with a delimiter (i.e.:  a single
-                        // newline sequence) to signal to the receiver when to stop reading.
-                        _textWriter.WriteLine();
-                        _textWriter.Flush();
-                    }
+                    serialized = JsonSerializationUtilities.Serialize(message);
+                    // We need to terminate JSON objects with a delimiter (i.e.:  a single
+                    // newline sequence) to signal to the receiver when to stop reading.
+                    _textWriter.WriteLine(serialized);
+                    _textWriter.Flush();
+                    //}
+                    afterWrite = stopWatch.Elapsed;
                 }
+                afterUnlock = stopWatch.Elapsed;
+
+                loggerThread.Enqueue(new
+                {
+                    beforeLock,
+                    afterLock,
+                    afterWrite,
+                    afterUnlock,
+                    serialized.Length,
+                    Type = message.Type.ToString(),
+                    Method = message.Method.ToString(),
+                    message.RequestId
+                });
             }
 
             return Task.FromResult(0);
@@ -172,14 +193,18 @@ namespace NuGet.Protocol.Plugins
             Task.Factory.StartNew(
                 () =>
                 {
-                    using (var file = new StreamWriter(File.OpenWrite($@"c:\temp\timings.{name}.{Process.GetCurrentProcess().ProcessName}.{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.{Process.GetCurrentProcess().Id}.{Guid.NewGuid():N}.log")))
+                    var fileStream = File.Open(
+                        $@"c:\temp\timings.{name}.{Process.GetCurrentProcess().ProcessName}.{DateTime.Now:yyyy-MM-dd-HH-mm-ss}.{Process.GetCurrentProcess().Id}.{Guid.NewGuid():N}.log",
+                        FileMode.Create,
+                        FileAccess.Write,
+                        FileShare.Read);
+                    using (var file = new StreamWriter(fileStream))
                     {
                         try
                         {
-                            file.WriteLine("{\"entries\":[null");
                             foreach (var obj in queue.GetConsumingEnumerable())
                             {
-                                file.WriteLine("," + JsonConvert.SerializeObject(obj));
+                                file.WriteLine(JsonConvert.SerializeObject(obj));
                                 file.Flush();
                             }
 
@@ -197,7 +222,7 @@ namespace NuGet.Protocol.Plugins
 
         public void Dispose()
         {
-            queue.CompleteAdding();
+            //queue.CompleteAdding();
             //done.Wait();
         }
 
