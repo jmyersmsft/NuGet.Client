@@ -1,4 +1,4 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
@@ -10,6 +10,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGet.Common;
 
 namespace NuGet.Protocol.Plugins
 {
@@ -313,7 +314,7 @@ namespace NuGet.Protocol.Plugins
                 MessageType.Request,
                 MessageMethod.Close);
 
-            using (var cancellationTokenSource = new CancellationTokenSource(PluginConstants.CloseTimeout))
+            using (var cancellationTokenSource = PluginCancellationTokenSource.CreateWithTimeout(PluginConstants.CloseTimeout, $"{nameof(PluginFactory)} {nameof(SendCloseRequest)}"))
             {
                 try
                 {

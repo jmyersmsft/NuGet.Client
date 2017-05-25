@@ -1,9 +1,10 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGet.Common;
 
 namespace NuGet.Protocol.Plugins
 {
@@ -13,7 +14,7 @@ namespace NuGet.Protocol.Plugins
     public sealed class InboundRequestContext : IDisposable
     {
         private readonly CancellationToken _cancellationToken;
-        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly ICancellationTokenSource _cancellationTokenSource;
         private readonly IConnection _connection;
         private bool _isDisposed;
 
@@ -50,7 +51,7 @@ namespace NuGet.Protocol.Plugins
             _connection = connection;
             RequestId = requestId;
 
-            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _cancellationTokenSource = PluginCancellationTokenSource.CreateLinkedTokenSource(cancellationToken, $"{nameof(InboundRequestContext)} {requestId}");
 
             // Capture the cancellation token now because if the cancellation token source
             // is disposed race conditions may cause an exception acccessing its Token property.
@@ -71,7 +72,7 @@ namespace NuGet.Protocol.Plugins
             {
                 using (_cancellationTokenSource)
                 {
-                    _cancellationTokenSource.Cancel();
+                    _cancellationTokenSource.Cancel($"Disposing {nameof(InboundRequestContext)}");
                 }
             }
             catch (Exception)

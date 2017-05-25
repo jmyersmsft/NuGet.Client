@@ -1,8 +1,9 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -75,7 +76,8 @@ namespace NuGet.PackageManagement
             var failedTasks = new List<Task<DownloadResourceResult>>();
             var tasksLookup = new Dictionary<Task<DownloadResourceResult>, SourceRepository>();
 
-            var linkedTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
+            var linkedTokenSource = PluginCancellationTokenSource.CreateLinkedTokenSource(token, $"{nameof(PackageDownloader)} {packageIdentity}");
+            var linkedToken = linkedTokenSource.Token;
             try
             {
                 // Create a group of local sources that will go first, then everything else.
@@ -128,7 +130,7 @@ namespace NuGet.PackageManagement
                             tasks.Remove(completedTask);
 
                             // Cancel the other tasks, since, they may still be running
-                            linkedTokenSource.Cancel();
+                            linkedTokenSource.Cancel("Canceling losers of race to provide package");
 
                             if (tasks.Any())
                             {
@@ -183,7 +185,24 @@ namespace NuGet.PackageManagement
                     var message = ExceptionUtilities.DisplayMessage(task.Exception);
 
                     errors.AppendLine($"  {tasksLookup[task].PackageSource.Source}: {message}");
+
+                    if (NuGetTaskCompletionSource.All.TryGetValue(task, out var tcsHolder))
+                    {
+                        tcsHolder.Dump(errors);
+                    }
                 }
+
+                if (NuGetTaskCompletionSource.All2.TryGetValue(linkedToken, out var tcsBag))
+                {
+                    foreach (var taskCompletionSourceHolder in tcsBag)
+                    {
+                        taskCompletionSourceHolder.Dump(errors, "TCS: ");
+                    }
+                }
+
+                errors.AppendLine($"{failedTasks.Count}/{tasksLookup.Count} failed.");
+
+                Debug.Print($"FailedTaskSummary:\n{errors}");
 
                 throw new FatalProtocolException(errors.ToString());
             }

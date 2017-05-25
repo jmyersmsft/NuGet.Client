@@ -1,9 +1,10 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGet.Common;
 using NuGet.Versioning;
 
 namespace NuGet.Protocol.Plugins
@@ -21,7 +22,7 @@ namespace NuGet.Protocol.Plugins
         private HandshakeRequest _outboundHandshakeRequest;
         private readonly SemanticVersion _protocolVersion;
         private TaskCompletionSource<int> _responseSentTaskCompletionSource;
-        private readonly CancellationTokenSource _timeoutCancellationTokenSource;
+        private readonly ICancellationTokenSource _timeoutCancellationTokenSource;
 
         /// <summary>
         /// Gets the <see cref="CancellationToken" /> for a request.
@@ -70,7 +71,7 @@ namespace NuGet.Protocol.Plugins
             _minimumProtocolVersion = minimumProtocolVersion;
             _handshakeFailedResponse = new HandshakeResponse(MessageResponseCode.Error, protocolVersion: null);
             _responseSentTaskCompletionSource = new TaskCompletionSource<int>();
-            _timeoutCancellationTokenSource = new CancellationTokenSource(handshakeTimeout);
+            _timeoutCancellationTokenSource = PluginCancellationTokenSource.CreateWithTimeout(handshakeTimeout, $"{nameof(SymmetricHandshake)}");
 
             _timeoutCancellationTokenSource.Token.Register(() =>
             {

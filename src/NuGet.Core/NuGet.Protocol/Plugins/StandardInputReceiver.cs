@@ -1,10 +1,11 @@
-// Copyright (c) .NET Foundation. All rights reserved.
+﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGet.Common;
 
 namespace NuGet.Protocol.Plugins
 {
@@ -18,7 +19,7 @@ namespace NuGet.Protocol.Plugins
     public sealed class StandardInputReceiver : Receiver
     {
         private readonly TextReader _reader;
-        private readonly CancellationTokenSource _receiveCancellationTokenSource;
+        private readonly ICancellationTokenSource _receiveCancellationTokenSource;
         private Task _receiveThread;
 
         /// <summary>
@@ -34,7 +35,7 @@ namespace NuGet.Protocol.Plugins
             }
 
             _reader = reader;
-            _receiveCancellationTokenSource = new CancellationTokenSource();
+            _receiveCancellationTokenSource = PluginCancellationTokenSource.Create($"{nameof(StandardInputReceiver)}");
         }
 
         /// <summary>
@@ -53,7 +54,7 @@ namespace NuGet.Protocol.Plugins
             {
                 using (_receiveCancellationTokenSource)
                 {
-                    _receiveCancellationTokenSource.Cancel();
+                    _receiveCancellationTokenSource.Cancel($"Disposing {nameof(StandardInputReceiver)}");
 
                     // Do not attempt to wait on completion of the receive thread task.
                     // In scenarios where standard input is backed by a non-blocking stream
