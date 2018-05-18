@@ -14,6 +14,26 @@ using NuGet.Configuration;
 
 namespace NuGet.Protocol
 {
+    public class BasicOnlyCredentialFilter : ICredentials
+    {
+        private readonly ICredentials _innerCredentials;
+
+        public BasicOnlyCredentialFilter(ICredentials innerCredentials)
+        {
+            _innerCredentials = innerCredentials;
+        }
+
+        public NetworkCredential GetCredential(Uri uri, string authType)
+        {
+            if (!authType.Equals("basic", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return _innerCredentials.GetCredential(uri, authType);
+        }
+    }
+
     public class HttpSourceAuthenticationHandler : DelegatingHandler
     {
         public static readonly int MaxAuthRetries = AmbientAuthenticationState.MaxAuthRetries;
@@ -54,7 +74,8 @@ namespace NuGet.Protocol
 
             // Create a new wrapper for ICredentials that can be modified
 
-            if (_credentialService == null || !_credentialService.HandlesDefaultCredentials)
+            if ((_credentialService == null || !_credentialService.HandlesDefaultCredentials)
+                    && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("NUGET_DISABLE_DEFAULT_CREDENTIALS")))
             {
                 // This is used to match the value of HttpClientHandler.UseDefaultCredentials = true
                 _credentials = new HttpSourceCredentials(CredentialCache.DefaultNetworkCredentials);
@@ -67,7 +88,12 @@ namespace NuGet.Protocol
             if (packageSource.Credentials != null &&
                 packageSource.Credentials.IsValid())
             {
-                var credentials = new NetworkCredential(packageSource.Credentials.Username, packageSource.Credentials.Password);
+                ICredentials credentials = new NetworkCredential(packageSource.Credentials.Username, packageSource.Credentials.Password);
+                if (!string.IsNullOrWhiteSpace(
+                    Environment.GetEnvironmentVariable("NUGET_CONFIGURED_CREDS_ARE_FOR_BASIC_ONLY")))
+                {
+                    credentials=new BasicOnlyCredentialFilter(credentials);
+                }
                 _credentials.Credentials = credentials;
             }
 

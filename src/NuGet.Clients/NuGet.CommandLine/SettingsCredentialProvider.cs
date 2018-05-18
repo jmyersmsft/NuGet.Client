@@ -1,9 +1,10 @@
-﻿extern alias CoreV2;
+extern alias CoreV2;
 
 using System;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using NuGet.Protocol;
 
 namespace NuGet.CommandLine
 {
@@ -39,6 +40,13 @@ namespace NuGet.CommandLine
                         CultureInfo.CurrentCulture,
                         LocalizedResourceManager.GetString(nameof(NuGetResources.SettingsCredentials_UsingSavedCredentials)),
                         credentials.UserName));
+
+                if (!string.IsNullOrWhiteSpace(
+                    Environment.GetEnvironmentVariable("NUGET_CONFIGURED_CREDS_ARE_FOR_BASIC_ONLY")))
+                {
+                   return new BasicOnlyCredentialFilter(credentials);
+                }
+
                 return credentials;
             }
             return null;
@@ -61,6 +69,7 @@ namespace NuGet.CommandLine
                 return false;
             }
             configurationCredentials = new NetworkCredential(source.Credentials.Username, source.Credentials.Password);
+
             return true;
         }
 
