@@ -17,6 +17,7 @@ using NuGet.Credentials;
 using NuGet.ProjectModel;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
+using NuGetCredentialProvider.Cancellation;
 
 namespace NuGet.Build.Tasks
 {
@@ -82,6 +83,7 @@ namespace NuGet.Build.Tasks
 
         public override bool Execute()
         {
+            _cts.Register("Build task cancellation source");
 #if DEBUG
             var debugPackTask = Environment.GetEnvironmentVariable("DEBUG_RESTORE_TASK");
             if (!string.IsNullOrEmpty(debugPackTask) && debugPackTask.Equals(bool.TrueString, StringComparison.OrdinalIgnoreCase))
@@ -235,7 +237,7 @@ namespace NuGet.Build.Tasks
 
         public void Cancel()
         {
-            _cts.Cancel();
+            _cts.Cancel("Build task canceled");
         }
 
         public void Dispose()

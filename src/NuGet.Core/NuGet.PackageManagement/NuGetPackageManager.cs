@@ -24,6 +24,7 @@ using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 using NuGet.Resolver;
 using NuGet.Versioning;
+using NuGetCredentialProvider.Cancellation;
 
 namespace NuGet.PackageManagement
 {
@@ -1825,6 +1826,7 @@ namespace NuGet.PackageManagement
             // TODO: what should the timeout be?
             // Give up after 5 minutes
             var tokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            tokenSource.Register("GetSourceRepository");
 
             var results = new Queue<KeyValuePair<SourceRepository, Task<bool>>>();
 
@@ -1854,7 +1856,7 @@ namespace NuGet.PackageManagement
                         source = pair.Key;
 
                         // there is no need to finish trying the others
-                        tokenSource.Cancel();
+                        tokenSource.Cancel("Found what we were looking for");
                     }
                 }
                 catch (OperationCanceledException)
@@ -2220,6 +2222,7 @@ namespace NuGet.PackageManagement
                     {
                         // Make this independently cancelable.
                         downloadTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
+                        downloadTokenSource.Register("downloadTokenSource");
 
                         // Download all packages up front in parallel
                         downloadTasks = await PackagePreFetcher.GetPackagesAsync(
@@ -2381,7 +2384,7 @@ namespace NuGet.PackageManagement
                     if (downloadTasks != null)
                     {
                         // Wait for all downloads to cancel and dispose
-                        downloadTokenSource.Cancel();
+                        downloadTokenSource.Cancel("In a finally? Not sure what's going on");
 
                         foreach (var result in downloadTasks.Values)
                         {

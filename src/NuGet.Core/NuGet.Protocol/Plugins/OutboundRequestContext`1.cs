@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGetCredentialProvider.Cancellation;
 
 namespace NuGet.Protocol.Plugins
 {
@@ -115,7 +116,7 @@ namespace NuGet.Protocol.Plugins
             }
 
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
+            _cancellationTokenSource.Register($"OutboundRequestContext {RequestId}");
             _logger = logger;
 
             _cancellationTokenSource.Token.Register(TryCancel);
@@ -228,7 +229,7 @@ namespace NuGet.Protocol.Plugins
                 {
                     using (_cancellationTokenSource)
                     {
-                        _cancellationTokenSource.Cancel();
+                        _cancellationTokenSource.Cancel("Closing OutboundRequestContext");
                     }
                 }
                 catch (Exception)
@@ -248,7 +249,10 @@ namespace NuGet.Protocol.Plugins
 
         private void TryCancel()
         {
-            if (_taskCompletionSource.TrySetCanceled())
+            var ctsForTracking = new CancellationTokenSource();
+            ctsForTracking.Register("OutboundRequestContext TryCancel tracking source");
+            ctsForTracking.Cancel("Canceling task");
+            if (_taskCompletionSource.TrySetCanceled(ctsForTracking.Token))
             {
                 if (Interlocked.CompareExchange(ref _isCancellationRequested, value: 1, comparand: 0) == 0)
                 {

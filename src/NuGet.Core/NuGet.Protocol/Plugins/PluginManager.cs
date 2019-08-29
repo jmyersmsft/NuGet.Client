@@ -15,6 +15,7 @@ using NuGet.Configuration;
 using NuGet.Packaging;
 using NuGet.Protocol.Core.Types;
 using NuGet.Shared;
+using NuGetCredentialProvider.Cancellation;
 
 namespace NuGet.Protocol.Plugins
 {
@@ -254,11 +255,17 @@ namespace NuGet.Protocol.Plugins
                 }
                 catch (Exception e)
                 {
+                    var message = e.Message;
+                    if (e is OperationCanceledException oce)
+                    {
+                        message += "\n" + oce.CancellationToken.DumpDiagnostics();
+                    }
+
                     pluginCreationResult = new PluginCreationResult(
                         string.Format(CultureInfo.CurrentCulture,
                             Strings.Plugin_ProblemStartingPlugin,
                             result.PluginFile.Path,
-                            e.Message),
+                            message),
                         e);
                 }
             }

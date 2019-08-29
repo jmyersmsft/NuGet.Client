@@ -10,6 +10,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGetCredentialProvider.Cancellation;
 
 namespace NuGet.Protocol.Plugins
 {
@@ -399,6 +400,7 @@ namespace NuGet.Protocol.Plugins
 
             using (var cancellationTokenSource = new CancellationTokenSource(PluginConstants.CloseTimeout))
             {
+                cancellationTokenSource.Register("SendCloseRequest timeout");
                 try
                 {
                     plugin.Connection.SendAsync(message, cancellationTokenSource.Token).Wait();
