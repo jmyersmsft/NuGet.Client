@@ -16,6 +16,7 @@ using NuGet.Configuration;
 using NuGet.Credentials;
 using NuGet.ProjectModel;
 using NuGet.Protocol;
+using NuGet.Protocol.Cancellation;
 using NuGet.Protocol.Core.Types;
 
 namespace NuGet.Build.Tasks

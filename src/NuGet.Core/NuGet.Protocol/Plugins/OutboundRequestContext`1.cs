@@ -140,7 +140,10 @@ namespace NuGet.Protocol.Plugins
                         MessageType.Cancel));
             }
 
-            _taskCompletionSource.TrySetCanceled();
+            var cts = new CancellationTokenSource();
+            cts.Register("tracking CTS for OutboundRequestContext.HandleCancelResponse task cancellation");
+            cts.Cancel("Pre-canceling");
+            _taskCompletionSource.TrySetCanceled(cts.Token);
         }
 
         /// <summary>
@@ -218,7 +221,10 @@ namespace NuGet.Protocol.Plugins
         {
             if (!_isClosed)
             {
-                _taskCompletionSource.TrySetCanceled();
+                var cts = new CancellationTokenSource();
+                cts.Register("tracking CTS for OutboundRequestContext.Close task cancellation");
+                cts.Cancel("Pre-canceling");
+                _taskCompletionSource.TrySetCanceled(cts.Token);
 
                 if (_timer != null)
                 {
