@@ -21,10 +21,10 @@ using NuGet.ProjectManagement;
 using NuGet.ProjectManagement.Projects;
 using NuGet.ProjectModel;
 using NuGet.Protocol;
+using NuGet.Protocol.Cancellation;
 using NuGet.Protocol.Core.Types;
 using NuGet.Resolver;
 using NuGet.Versioning;
-using NuGetCredentialProvider.Cancellation;
 
 namespace NuGet.PackageManagement
 {

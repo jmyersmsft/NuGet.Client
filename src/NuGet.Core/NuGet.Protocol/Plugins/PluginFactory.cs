@@ -10,7 +10,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using NuGetCredentialProvider.Cancellation;
+using NuGet.Protocol.Cancellation;
 
 namespace NuGet.Protocol.Plugins
 {

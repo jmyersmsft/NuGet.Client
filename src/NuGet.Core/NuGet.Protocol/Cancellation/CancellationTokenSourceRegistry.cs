@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace NuGetCredentialProvider.Cancellation
+namespace NuGet.Protocol.Cancellation
 {
     public class CancellationTokenSourceRegistry
     {

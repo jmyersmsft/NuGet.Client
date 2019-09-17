@@ -2,7 +2,7 @@
 using System.Collections.Immutable;
 using System.Threading;
 
-namespace NuGetCredentialProvider.Cancellation
+namespace NuGet.Protocol.Cancellation
 {
     public class CancellationTokenSourceInfo
     {

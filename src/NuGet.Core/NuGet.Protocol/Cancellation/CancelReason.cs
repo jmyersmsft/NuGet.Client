@@ -1,4 +1,4 @@
-﻿namespace NuGetCredentialProvider.Cancellation
+﻿namespace NuGet.Protocol.Cancellation
 {
     public class CancelReason
     {

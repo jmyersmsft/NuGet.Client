@@ -12,8 +12,8 @@ using System.Threading.Tasks;
 using NuGet.Common;
 using NuGet.Packaging;
 using NuGet.Packaging.Core;
+using NuGet.Protocol.Cancellation;
 using NuGet.Protocol.Core.Types;
-using NuGetCredentialProvider.Cancellation;
 
 namespace NuGet.PackageManagement
 {

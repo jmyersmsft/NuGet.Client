@@ -13,9 +13,9 @@ using Newtonsoft.Json.Linq;
 using NuGet.Common;
 using NuGet.Configuration;
 using NuGet.Packaging;
+using NuGet.Protocol.Cancellation;
 using NuGet.Protocol.Core.Types;
 using NuGet.Shared;
-using NuGetCredentialProvider.Cancellation;
 
 namespace NuGet.Protocol.Plugins
 {

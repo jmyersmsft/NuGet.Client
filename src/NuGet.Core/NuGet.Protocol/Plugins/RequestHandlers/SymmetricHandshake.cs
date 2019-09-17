@@ -4,8 +4,8 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using NuGet.Protocol.Cancellation;
 using NuGet.Versioning;
-using NuGetCredentialProvider.Cancellation;
 
 namespace NuGet.Protocol.Plugins
 {

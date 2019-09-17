@@ -19,7 +19,7 @@ using Newtonsoft.Json;
 using NuGet.Packaging.PackageExtraction;
 using NuGet.Packaging.Signing;
 using System.Net;
-using NuGetCredentialProvider.Cancellation;
+using NuGet.Protocol.Cancellation;
 
 namespace NuGet.Protocol.Core.Types
 {
